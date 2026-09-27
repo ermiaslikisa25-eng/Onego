@@ -10,13 +10,17 @@
     "packages/driver-app",
     "packages/supervisor-web",
     "packages/admin-web",
-    "packages/functions"
+    "functions"
   ],
   "scripts": {
-    "install:all": "npm install --workspaces",
+    "install:all": "npm install",
     "dev": "node dev-runner.mjs",
-    "build": "npm run build --workspaces",
-    "preview": "npm run preview --workspaces"
+    "typecheck": "npm run typecheck --workspace packages/customer-app && npm run typecheck --workspace packages/driver-app && npm run typecheck --workspace packages/supervisor-web && npm run typecheck --workspace packages/admin-web",
+    "build": "npm run build --workspace packages/customer-app && npm run build --workspace packages/driver-app && npm run build --workspace packages/supervisor-web && npm run build --workspace packages/admin-web",
+    "build:customer": "npm run build --workspace packages/customer-app",
+    "build:driver": "npm run build --workspace packages/driver-app",
+    "build:supervisor": "npm run build --workspace packages/supervisor-web",
+    "build:admin": "npm run build --workspace packages/admin-web"
   },
   "devDependencies": {
     "vite": "latest"
