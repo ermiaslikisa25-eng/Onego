@@ -1,0 +1,24 @@
+{
+  "name": "onego-root",
+  "version": "1.0.0",
+  "description": "OneGo - Complete Connected Delivery MVP",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "packages/customer-app",
+    "packages/driver-app",
+    "packages/supervisor-web",
+    "packages/admin-web",
+    "packages/functions"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev": "node dev-runner.mjs",
+    "build": "npm run build --workspaces",
+    "preview": "npm run preview --workspaces"
+  },
+  "devDependencies": {
+    "vite": "latest"
+  }
+}
