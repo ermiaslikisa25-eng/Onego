@@ -1,16 +1,10 @@
 {
   "name": "@onego/shared",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
-  "description": "Shared utilities and Firebase config",
   "main": "index.ts",
-  "exports": {
-    ".": "./index.ts",
-    "./firebase": "./firebase.ts",
-    "./orders": "./orders.ts",
-    "./types": "./types.ts"
-  },
-  "dependencies": {
-    "firebase": "latest"
-  }
+  "types": "index.ts",
+  "exports": { ".": "./index.ts", "./firebase": "./firebase.ts", "./orders": "./orders.ts", "./types": "./types.ts" },
+  "dependencies": { "firebase": "latest" }
 }
