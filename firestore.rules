@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(r) {
+      return signedIn() && request.auth.token.role == r;
+    }
+
+    function isStaff() {
+      return signedIn() && request.auth.token.role in ['driver', 'supervisor', 'admin'];
+    }
+
+    function isOpsOrAdmin() {
+      return signedIn() && request.auth.token.role in ['supervisor', 'admin'];
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    // Users collection: customers, drivers, supervisors, admins
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isOpsOrAdmin());
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && (request.auth.uid == uid || isOpsOrAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      // Customers create orders
+      allow create: if signedIn() && hasRole('customer')
+                    && request.resource.data.customerId == request.auth.uid;
+      
+      // Read: customer sees own orders, driver/supervisor/admin see all
+      allow read: if signedIn() && (
+                    resource.data.customerId == request.auth.uid ||
+                    resource.data.driverId == request.auth.uid ||
+                    isOpsOrAdmin()
+                  );
+      
+      // Update: customer updates own pending orders, driver updates assigned orders, ops updates any
+      allow update: if signedIn() && (
+                    (hasRole('customer') && resource.data.customerId == request.auth.uid) ||
+                    (hasRole('driver') && resource.data.driverId == request.auth.uid) ||
+                    isOpsOrAdmin()
+                  );
+      
+      allow delete: if isAdmin();
+    }
+
+    // Cash collections: driver/ops create and read, ops update, admin delete
+    match /cashCollections/{id} {
+      allow read: if isOpsOrAdmin() || (hasRole('driver') && resource.data.driverId == request.auth.uid);
+      allow create: if hasRole('driver') || isOpsOrAdmin();
+      allow update: if isOpsOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Audit logs: ops read/create, admin delete
+    match /auditLogs/{id} {
+      allow read: if isOpsOrAdmin();
+      allow create: if isStaff();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

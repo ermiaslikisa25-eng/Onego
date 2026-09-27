@@ -1,0 +1,12 @@
+{
+  "name": "@onego/functions",
+  "private": true,
+  "type": "module",
+  "description": "OneGo backend utilities (server-side only)",
+  "dependencies": {
+    "firebase-admin": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest"
+  }
+}
