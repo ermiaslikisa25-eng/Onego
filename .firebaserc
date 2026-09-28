@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "default": "onego-f0d3c",
+    "production": "onego-f0d3c"
+  },
+  "targets": {
+    "onego-f0d3c": {
+      "hosting": {
+        "customer": ["onego-customer"],
+        "driver": ["onego-driver"],
+        "supervisor": ["onego-supervisor"],
+        "admin": ["onego-admin"]
+      }
+    }
+  }
+}
