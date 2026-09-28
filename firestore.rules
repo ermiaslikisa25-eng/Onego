@@ -1,72 +1,161 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ==============================
+    // AUTHENTICATION
+    // ==============================
 
     function signedIn() {
       return request.auth != null;
     }
 
-    function hasRole(r) {
-      return signedIn() && request.auth.token.role == r;
+    // ==============================
+    // ROLES
+    // ==============================
+
+    function isCustomer() {
+      return signedIn()
+        && request.auth.token.role == "customer";
     }
 
-    function isStaff() {
-      return signedIn() && request.auth.token.role in ['driver', 'supervisor', 'admin'];
+    function isDriver() {
+      return signedIn()
+        && request.auth.token.role == "driver";
     }
 
-    function isOpsOrAdmin() {
-      return signedIn() && request.auth.token.role in ['supervisor', 'admin'];
+    function isSupervisor() {
+      return signedIn()
+        && request.auth.token.role == "supervisor";
     }
 
     function isAdmin() {
-      return hasRole('admin');
+      return signedIn()
+        && request.auth.token.role == "admin";
     }
 
-    // Users collection: customers, drivers, supervisors, admins
-    match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isOpsOrAdmin());
-      allow create: if signedIn() && request.auth.uid == uid;
-      allow update: if signedIn() && (request.auth.uid == uid || isOpsOrAdmin());
+    function isOperations() {
+      return signedIn()
+        && request.auth.token.role in ["supervisor", "admin"];
+    }
+
+    // ==============================
+    // USERS
+    // ==============================
+
+    match /users/{userId} {
+
+      // Users can read themselves.
+      // Supervisor/Admin can read operational users.
+      allow read: if signedIn()
+        && (
+          request.auth.uid == userId
+          || isOperations()
+        );
+
+      // New users can create only their own
+      // customer account.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == "customer";
+
+      // User can update their own profile,
+      // but cannot change their role.
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role;
+
+      // Supervisor/Admin can update users.
+      allow update: if isOperations();
+
+      // Only Admin can delete users.
       allow delete: if isAdmin();
     }
 
-    // Orders collection
+    // ==============================
+    // ORDERS
+    // ==============================
+
     match /orders/{orderId} {
-      // Customers create orders
-      allow create: if signedIn() && hasRole('customer')
-                    && request.resource.data.customerId == request.auth.uid;
-      
-      // Read: customer sees own orders, driver/supervisor/admin see all
-      allow read: if signedIn() && (
-                    resource.data.customerId == request.auth.uid ||
-                    resource.data.driverId == request.auth.uid ||
-                    isOpsOrAdmin()
-                  );
-      
-      // Update: customer updates own pending orders, driver updates assigned orders, ops updates any
-      allow update: if signedIn() && (
-                    (hasRole('customer') && resource.data.customerId == request.auth.uid) ||
-                    (hasRole('driver') && resource.data.driverId == request.auth.uid) ||
-                    isOpsOrAdmin()
-                  );
-      
+
+      // Customer creates their own order.
+      allow create: if isCustomer()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.paymentMethod == "cash";
+
+      // Customer sees own orders.
+      // Driver sees assigned orders.
+      // Supervisor/Admin see all orders.
+      allow read: if signedIn()
+        && (
+          resource.data.customerId == request.auth.uid
+          || resource.data.driverId == request.auth.uid
+          || isOperations()
+        );
+
+      // Driver can update an assigned order.
+      allow update: if isDriver()
+        && resource.data.driverId == request.auth.uid
+        && request.resource.data.customerId == resource.data.customerId
+        && request.resource.data.driverId == resource.data.driverId
+        && request.resource.data.fee == resource.data.fee;
+
+      // Supervisor/Admin can manage orders.
+      allow update: if isOperations();
+
+      // Only Admin can delete an order.
       allow delete: if isAdmin();
     }
 
-    // Cash collections: driver/ops create and read, ops update, admin delete
-    match /cashCollections/{id} {
-      allow read: if isOpsOrAdmin() || (hasRole('driver') && resource.data.driverId == request.auth.uid);
-      allow create: if hasRole('driver') || isOpsOrAdmin();
-      allow update: if isOpsOrAdmin();
+    // ==============================
+    // CASH COLLECTIONS
+    // ==============================
+
+    match /cashCollections/{collectionId} {
+
+      // Driver records their own cash collection.
+      allow create: if isDriver()
+        && request.resource.data.driverId == request.auth.uid;
+
+      // Driver sees own collections.
+      // Supervisor/Admin see all.
+      allow read: if signedIn()
+        && (
+          (
+            isDriver()
+            && resource.data.driverId == request.auth.uid
+          )
+          || isOperations()
+        );
+
+      // Supervisor/Admin reconcile cash.
+      allow update: if isOperations();
+
+      // Only Admin can delete.
       allow delete: if isAdmin();
     }
 
-    // Audit logs: ops read/create, admin delete
-    match /auditLogs/{id} {
-      allow read: if isOpsOrAdmin();
-      allow create: if isStaff();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+    // ==============================
+    // AUDIT LOGS
+    // ==============================
+
+    match /auditLogs/{logId} {
+
+      // Supervisor/Admin can view audit logs.
+      allow read: if isOperations();
+
+      // Only Admin can create/update/delete.
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ==============================
+    // DEFAULT DENY
+    // ==============================
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
