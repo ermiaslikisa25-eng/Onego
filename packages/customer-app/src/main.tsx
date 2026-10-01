@@ -72,35 +72,47 @@ function App() {
   const t = langs[lang] || langs['en'];
 
   async function submit() {
-    if (!pickup || !dest) {
-      alert('Please enter pickup and destination addresses');
-      return;
-    }
-    setLoading(true);
-    try {
-      await createOrder({
-        customerId: user.uid,
-        customerName: user.displayName || user.phoneNumber || '',
-        customerPhone: user.phoneNumber || '',
-        service: service as any,
-        pickupAddress: pickup,
-        destinationAddress: dest,
-        note,
-        fee: Number(fee) || 0,
-        paymentMethod: 'cash',
-        status: 'pending',
-      });
-      setPickup('');
-      setDest('');
-      setNote('');
-      setFee('100');
-      alert('Order created successfully!');
-    } catch (error: any) {
-      alert('Error creating order: ' + error.message);
-    }
-    setLoading(false);
+  if (!user) {
+    alert('Please sign in first');
+    return;
   }
 
+  const currentUser = user;
+
+  if (!pickup || !dest) {
+    alert('Please enter pickup and destination addresses');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    await createOrder({
+      customerId: currentUser.uid,
+      customerName: currentUser.displayName || currentUser.phoneNumber || '',
+      customerPhone: currentUser.phoneNumber || '',
+      service: service as any,
+      pickupAddress: pickup,
+      destinationAddress: dest,
+      note,
+      fee: Number(fee) || 0,
+      paymentMethod: 'cash',
+      status: 'pending',
+    });
+
+    setPickup('');
+    setDest('');
+    setNote('');
+    setFee('100');
+
+    alert('Order created successfully!');
+  } catch (error: any) {
+    alert('Error creating order: ' + error.message);
+  }
+
+  setLoading(false);
+}
+  
   async function handleLogout() {
     await signOut(auth);
   }
